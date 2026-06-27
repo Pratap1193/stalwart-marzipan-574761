@@ -15,9 +15,11 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 
-    <!-- Hidden Netlify Forms for SPA detection during build -->
-    <!-- This form is never displayed, it's only used for Netlify to detect form fields -->
-    <form name="reservation" method="POST" netlify hidden>
+    <!-- REQUIRED: Hidden Netlify Forms for SPA detection during build -->
+    <!-- This form is NEVER displayed - it's only used by Netlify to detect form fields during deployment -->
+    <!-- All fields MUST match the Reservation form in src/pages/Reservation.tsx -->
+    <form name="reservation" method="POST" netlify netlify-honeypot="bot-field" hidden>
+      <input type="hidden" name="bot-field" />
       <input type="text" name="name" />
       <input type="email" name="email" />
       <input type="tel" name="phone" />

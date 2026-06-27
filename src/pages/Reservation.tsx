@@ -1,8 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 
 export default function Reservation() {
-  const formRef = useRef<HTMLFormElement>(null);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -29,53 +28,53 @@ export default function Reservation() {
     setErrorMessage("");
     
     try {
-      // Create FormData object for Netlify Forms submission
-      const formDataObj = new FormData();
-      formDataObj.append("form-name", "reservation");
-      formDataObj.append("name", formData.name);
-      formDataObj.append("email", formData.email);
-      formDataObj.append("phone", formData.phone);
-      formDataObj.append("date", formData.date);
-      formDataObj.append("time", formData.time);
-      formDataObj.append("guests", formData.guests);
-      formDataObj.append("specialRequest", formData.specialRequest);
+      // Encode form data in Netlify-compatible format: application/x-www-form-urlencoded
+      const encodedData = new URLSearchParams();
+      encodedData.append("form-name", "reservation");
+      encodedData.append("name", formData.name);
+      encodedData.append("email", formData.email);
+      encodedData.append("phone", formData.phone);
+      encodedData.append("date", formData.date);
+      encodedData.append("time", formData.time);
+      encodedData.append("guests", formData.guests);
+      encodedData.append("specialRequest", formData.specialRequest);
 
-      // Submit to Netlify Forms (POST to /)
-      const netlifyRes = await fetch("/", {
+      // Primary: Submit to Netlify Forms (POST to / with form-name)
+      // This is the ONLY endpoint needed for Netlify Forms
+      const netlifyResponse = await fetch("/", {
         method: "POST",
-        body: formDataObj
-      }).catch(err => {
-        console.warn("Netlify Forms submission error (non-blocking):", err);
-        // Continue even if Netlify Forms fails
-        return { ok: true };
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: encodedData.toString()
       });
 
-      // Also submit to custom API endpoint for data persistence
-      const apiRes = await fetch("/.netlify/functions/reservations", {
+      // Check if Netlify Forms accepted the submission
+      if (!netlifyResponse.ok) {
+        throw new Error(`Netlify Forms returned ${netlifyResponse.status}`);
+      }
+
+      // SUCCESS: Form was submitted to Netlify
+      // Show success message ONLY after Netlify confirms
+      setStatus("success");
+      setFormData({ name: "", phone: "", email: "", date: "", time: "", guests: "2", specialRequest: "" });
+      
+      // Also save to custom API for backup (non-blocking)
+      fetch("/.netlify/functions/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          "form-name": "reservation",
           submittedAt: new Date().toISOString()
         })
       }).catch(err => {
-        console.warn("API submission error (non-blocking):", err);
-        return { ok: true };
+        console.warn("Backup API storage failed (non-blocking):", err);
       });
-
-      // Show success if either endpoint succeeds
-      if (netlifyRes.ok || apiRes.ok) {
-        setStatus("success");
-        setFormData({ name: "", phone: "", email: "", date: "", time: "", guests: "2", specialRequest: "" });
-      } else {
-        setStatus("error");
-        setErrorMessage("Failed to submit reservation. Please try again.");
-      }
+      
     } catch (err) {
-      console.error("Submission error:", err);
+      console.error("Reservation submission error:", err);
       setStatus("error");
-      setErrorMessage("Something went wrong. Please try again.");
+      setErrorMessage("Failed to submit reservation. Please check your connection and try again.");
     }
   };
 
@@ -100,8 +99,9 @@ export default function Reservation() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-serif mb-2 text-stone-100">Reservation Confirmed</h3>
-              <p className="text-stone-400">We look forward to serving you. Your reservation has been submitted successfully.</p>
+              <h3 className="text-2xl font-serif mb-2 text-stone-100">Reservation Confirmed ✓</h3>
+              <p className="text-stone-400 mb-2">Thank you! Your reservation has been successfully submitted.</p>
+              <p className="text-stone-500 text-sm">We will review your booking and send you a confirmation email shortly.</p>
               <button 
                 onClick={() => setStatus("idle")}
                 className="mt-8 px-6 py-2 border border-amber-500 text-amber-500 hover:bg-amber-500 hover:text-stone-950 transition-colors uppercase text-sm tracking-wider"
@@ -111,7 +111,6 @@ export default function Reservation() {
             </div>
           ) : (
             <form 
-              ref={formRef}
               onSubmit={handleSubmit}
               className="space-y-6"
               name="reservation"
@@ -119,9 +118,10 @@ export default function Reservation() {
               data-netlify="true"
               netlify-honeypot="bot-field"
             >
-              {/* Netlify Forms hidden field */}
+              {/* REQUIRED: Hidden form name field for Netlify identification */}
               <input type="hidden" name="form-name" value="reservation" />
-              {/* Honeypot field for spam protection */}
+              
+              {/* REQUIRED: Honeypot field for spam protection */}
               <input type="hidden" name="bot-field" />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -131,6 +131,7 @@ export default function Reservation() {
                     required 
                     type="text" 
                     name="name"
+                    placeholder="Your full name"
                     className="w-full bg-stone-950 border border-stone-800 px-4 py-3 text-stone-100 focus:outline-none focus:border-amber-500 transition-colors" 
                     value={formData.name}
                     onChange={handleChange}
@@ -142,6 +143,7 @@ export default function Reservation() {
                     required 
                     type="tel" 
                     name="phone"
+                    placeholder="Your phone number"
                     className="w-full bg-stone-950 border border-stone-800 px-4 py-3 text-stone-100 focus:outline-none focus:border-amber-500 transition-colors" 
                     value={formData.phone}
                     onChange={handleChange}
@@ -153,6 +155,7 @@ export default function Reservation() {
                     required 
                     type="email" 
                     name="email"
+                    placeholder="your@email.com"
                     className="w-full bg-stone-950 border border-stone-800 px-4 py-3 text-stone-100 focus:outline-none focus:border-amber-500 transition-colors" 
                     value={formData.email}
                     onChange={handleChange}
@@ -162,11 +165,12 @@ export default function Reservation() {
                   <label className="block text-stone-400 text-sm tracking-wider uppercase mb-2">Guests</label>
                   <select 
                     name="guests"
-                    className="w-full bg-stone-950 border border-stone-800 px-4 py-3 text-stone-100 focus:outline-none focus:border-amber-500 transition-colors appearance-none" 
+                    required
+                    className="w-full bg-stone-950 border border-stone-800 px-4 py-3 text-stone-100 focus:outline-none focus:border-amber-500 transition-colors appearance-none cursor-pointer" 
                     value={formData.guests}
                     onChange={handleChange}
                   >
-                    {[1,2,3,4,5,6,7,8,9,10, "+10"].map(n => <option key={n} value={n.toString()}>{n} People</option>)}
+                    {[1,2,3,4,5,6,7,8,9,10, "+10"].map(n => <option key={n} value={n.toString()}>{n} {n === 1 ? 'Person' : 'People'}</option>)}
                   </select>
                 </div>
                 <div>
@@ -192,30 +196,38 @@ export default function Reservation() {
                   />
                 </div>
               </div>
+              
               <div>
                 <label className="block text-stone-400 text-sm tracking-wider uppercase mb-2">Special Requests</label>
                 <textarea 
                   rows={3} 
                   name="specialRequest"
-                  className="w-full bg-stone-950 border border-stone-800 px-4 py-3 text-stone-100 focus:outline-none focus:border-amber-500 transition-colors" 
+                  placeholder="Any special dietary requirements or preferences? (Optional)"
+                  className="w-full bg-stone-950 border border-stone-800 px-4 py-3 text-stone-100 focus:outline-none focus:border-amber-500 transition-colors resize-none" 
                   value={formData.specialRequest}
                   onChange={handleChange}
                 />
               </div>
               
               {status === "error" && (
-                <p className="text-red-500 text-sm text-center">{errorMessage || "Something went wrong. Please try again."}</p>
+                <div className="bg-red-500/10 border border-red-500/30 rounded p-4">
+                  <p className="text-red-400 text-sm text-center">{errorMessage}</p>
+                </div>
               )}
               
               <div className="text-center pt-4">
                 <button 
                   type="submit" 
                   disabled={status === "loading"}
-                  className="px-10 py-4 bg-amber-500 text-stone-950 uppercase tracking-wider text-sm font-medium hover:bg-amber-400 transition-colors disabled:opacity-50 w-full sm:w-auto"
+                  className="px-10 py-4 bg-amber-500 text-stone-950 uppercase tracking-wider text-sm font-medium hover:bg-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                 >
-                  {status === "loading" ? "Confirming..." : "Confirm Reservation"}
+                  {status === "loading" ? "Submitting to Netlify Forms..." : "Confirm Reservation"}
                 </button>
               </div>
+              
+              <p className="text-stone-500 text-xs text-center mt-4">
+                Your reservation will be processed and you'll receive a confirmation email.
+              </p>
             </form>
           )}
         </motion.div>

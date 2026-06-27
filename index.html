@@ -14,6 +14,29 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Hidden Netlify Forms for SPA detection during build -->
+    <!-- This form is never displayed, it's only used for Netlify to detect form fields -->
+    <form name="reservation" method="POST" netlify hidden>
+      <input type="text" name="name" />
+      <input type="email" name="email" />
+      <input type="tel" name="phone" />
+      <input type="date" name="date" />
+      <input type="time" name="time" />
+      <select name="guests">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+        <option value="+10">+10</option>
+      </select>
+      <textarea name="specialRequest"></textarea>
+    </form>
   </body>
 </html>
-

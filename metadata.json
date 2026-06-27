@@ -1,0 +1,6 @@
+{
+  "name": "Lime Light Restaurant",
+  "description": "A luxurious full-stack restaurant website with an admin panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
